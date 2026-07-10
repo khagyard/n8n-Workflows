@@ -1,0 +1,783 @@
+{
+  "name": "TDX Triager",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.example.com/tickets/{{$json.ID}}/feed",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "=json",
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "jsonBody": "={\n  \"Comments\": {{ JSON.stringify($('Maizey Ticket Responder').item.json.response) }},\n  \"IsPrivate\": true\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1648,
+        1600
+      ],
+      "id": "472bc1f9-1ba6-4381-b878-99887ca7dd07",
+      "name": "Post Comment on Ticket",
+      "credentials": {
+        "oAuth2Api": {
+          "id": "abc123",
+          "name": "Example API Dir"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://api.example.com/reports/12345",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "withData",
+              "value": "true"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -64,
+        1712
+      ],
+      "id": "4d8e41ba-f7b8-4145-9375-a77ed3f3932c",
+      "name": "Get Ticket Report",
+      "credentials": {
+        "oAuth2Api": {
+          "id": "abc123",
+          "name": "Example API Dir"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "DataRows",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        144,
+        1712
+      ],
+      "id": "0b835f64-7340-4017-9c64-7f32de4cbb34",
+      "name": "Split Tickets"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.example.com/tickets/{{$json.TicketID}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        336,
+        1776
+      ],
+      "id": "014131a1-0c94-438e-afd6-33f584549176",
+      "name": "Get Ticket Details",
+      "credentials": {
+        "oAuth2Api": {
+          "id": "abc123",
+          "name": "Example API Dir"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "23cf5cd1-a065-4731-87af-9f06fa86750f",
+              "name": "AI_response",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        976,
+        1600
+      ],
+      "id": "9cab3c3e-7a85-4e01-ba19-317a4546c816",
+      "name": "Store Processed Ticket Info"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://umgpt.umich.edu/maizey/api/projects/a2b2789b-f4dd-4de7-8446-3728ae5bbc79/conversation/203997/messages/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ $('Get Ticket Details').item.json.Description }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1200,
+        1600
+      ],
+      "id": "7bb457ca-dac1-4317-b863-c04dda461567",
+      "name": "Maizey Ticket Responder",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "MqmhqWX4nyxbL4Rz",
+          "name": "Maizey Ticket Responder"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://gw.api.it.umich.edu/um/it/31/tickets/{{$('Get Ticket Details').item.json.ID}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "=json",
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "jsonBody": "=[\n  {\n    \"op\": \"replace\",\n    \"path\": \"/ResponsibleUid\",\n    \"value\": \"{{ $('Get Ticket Details').item.json.ResponsibleUid }}\"\n  }\n]",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1424,
+        1600
+      ],
+      "id": "ec7dbf4d-18a1-4a21-86bf-59358965e8fa",
+      "name": "Refresh Ticket Details",
+      "credentials": {
+        "oAuth2Api": {
+          "id": "df5GDo8R1cSaPSBc",
+          "name": "Umich API Dir"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "AP0GJpzv4QIRzxvN",
+          "mode": "list",
+          "cachedResultName": "Tickets",
+          "cachedResultUrl": "/projects/h4v4CwtOrcSgwQKU/datatables/AP0GJpzv4QIRzxvN"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ticketid": "={{ $json.ItemID }}"
+          },
+          "matchingColumns": [
+            "ticketid"
+          ],
+          "schema": [
+            {
+              "id": "ticketid",
+              "displayName": "ticketid",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1872,
+        1600
+      ],
+      "id": "92cf5569-b657-4b37-b19f-35550931e4d3",
+      "name": "Store Processed Ticket ID"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "AP0GJpzv4QIRzxvN",
+          "mode": "list",
+          "cachedResultName": "Tickets",
+          "cachedResultUrl": "/projects/h4v4CwtOrcSgwQKU/datatables/AP0GJpzv4QIRzxvN"
+        },
+        "returnAll": true
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        336,
+        1472
+      ],
+      "id": "09809af2-1e61-4838-8c46-17cd2247724c",
+      "name": "Get row(s)"
+    },
+    {
+      "parameters": {
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "ticketid",
+              "field2": "ID"
+            }
+          ]
+        },
+        "resolve": "preferInput2",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.compareDatasets",
+      "typeVersion": 2.3,
+      "position": [
+        544,
+        1536
+      ],
+      "id": "cdc31378-b037-42a5-a777-f5f3d451c741",
+      "name": "Compare Datasets"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -288,
+        1536
+      ],
+      "id": "7f3dc4fc-4fcb-45c9-8e28-813fdd339f2b",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "content": "\n\n\n## Get Ticket Details\nPulls the information included in the the ticket corresponding to the ID. Uses the TDX API.\n\n\n\n\n\n\n\n\n\n* For the URL reference the TDX API Documentation at https://dir.api.it.umich.edu/docs/tdxticket/1/overview or https://dir-test.api.it.umich.edu/docs/tdxticket/1/overview (if testing)\n* add {{$json.TicketID}}\nas a path to the end of the endpoint",
+        "height": 624,
+        "width": 208,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        288,
+        1536
+      ],
+      "id": "1c2a10da-d772-4978-8031-144e3fc5071f",
+      "name": "Sticky Note9"
+    },
+    {
+      "parameters": {
+        "content": "## Get Ticket ID Rows\nRetrieves all previously processed ticket IDs from the Tickets data table. Used to identify tickets that have already been handled by the workflow.",
+        "height": 320,
+        "width": 208,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        288,
+        1216
+      ],
+      "id": "f1ad79b1-1af8-4775-ab60-487b37d402a9",
+      "name": "Sticky Note10"
+    },
+    {
+      "parameters": {
+        "content": "## Compare Ticket IDs\nCompares the list of previously processed tickets to the list of the incoming tickets to the workflow",
+        "height": 512,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        496,
+        1328
+      ],
+      "id": "22b93424-9daf-4574-af80-4e40423723ec",
+      "name": "Sticky Note11"
+    },
+    {
+      "parameters": {
+        "content": "## Hourly Trigger\nTriggers the workflow to run hourly",
+        "height": 304,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -352,
+        1408
+      ],
+      "id": "00224a1f-0aa7-417f-b01e-a3e9aeaad203",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## This Template Demonstrates\nA workflow designed to read and respond to tickets in TDX\n- Scheduled hourly trigger\n- Gathers all tickets in the specific TDX ticket report\n- Gets the information from each ticket\n- Checks if the ticket has already been processed \n- Send the ticket to a helper Maizey to get the information to answer the ticket\n- Uses another Maizey to properly structure the response to the ticket\n- Posts the response to TDX\n- Saves the Ticket ID to a table to prevent reprocessing\n",
+        "height": 288,
+        "width": 592,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        112,
+        896
+      ],
+      "id": "74266b5d-f631-4c5d-8baa-8b0e3ab8d606",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "## Required Credentials and Scope\n- Umich API Directory\n      - TeamDynamix API credentials used to retrieve ticket information and post responses.\n- Maizey Help\n      - Credentials for a Maizey chatbot project used to retrieve relevant information                          and support ticket response generation.\n- Maizey Ticket Responder\n      - Credentials for a Maizey chatbot project that generates responses to user ticket inquiries.\n",
+        "height": 288,
+        "width": 608
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        704,
+        896
+      ],
+      "id": "61085dfb-1a91-4429-b741-7d2506eaf378",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "## Ideas and Tips\n- Update the ticket source: set the ticket source for your team's specific report. See details on how to set the credentials\n- Review responses before deploying them to TDX\n- Test the workflow before enabling automated ticket responses in production.\n- Verify duplicate detection: Ensure the processed ticket tracking table is functioning correctly to prevent multiple responses from being posted to the same ticket.\n- Monitor API usage: The workflow uses multiple API calls per ticket. Large ticket volumes may increase processing time and API consumption.",
+        "height": 288,
+        "width": 608,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1312,
+        896
+      ],
+      "id": "15466989-21d7-41ae-a7bf-298a385ab7bb",
+      "name": "Sticky Note20"
+    },
+    {
+      "parameters": {
+        "content": "## Get the Ticket Report From TDX\nPulls up the ticket report using the TDX API.\n\n\n\n\n\n\n\n\n* For the URL reference the TDX API Documentation at https://dir.api.it.umich.edu/docs/tdxticket/1/overview\nor https://dir-test.api.it.umich.edu/docs/tdxticket/1/overview (if testing)",
+        "height": 672,
+        "width": 192,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -112,
+        1488
+      ],
+      "id": "f21d2540-4b1c-46bb-9c6f-9418fff235d0",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "content": "## Split Tickets\nSplits the report so the tickets can be processed one at a time by the workflow",
+        "height": 416,
+        "width": 208,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        80,
+        1488
+      ],
+      "id": "28a2287b-62c5-43f1-8c61-1c2e8a8525e6",
+      "name": "Sticky Note21"
+    },
+    {
+      "parameters": {
+        "content": "## Maizey Help\nSends the ticket content to the Maizey knowledge base to retrieve relevant context and supporting information. Uses Maizey API.\n\n\n\n\n\n\n\n\n\n\n\n* To get the URL for your Maizey reference  https://umgpt.umich.edu/api/schema-public/swagger-ui/",
+        "height": 832,
+        "width": 192,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        736,
+        1328
+      ],
+      "id": "b894d454-e39c-46ab-9615-d450b3b68f5e",
+      "name": "Sticky Note22"
+    },
+    {
+      "parameters": {
+        "content": "## Store Processed Ticket Info\nStores the needed information to variable for further use later in the workflow.",
+        "height": 512,
+        "width": 208,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        928,
+        1328
+      ],
+      "id": "c9a34507-9230-4c5e-b17d-2fa4a34dab07",
+      "name": "Sticky Note23"
+    },
+    {
+      "parameters": {
+        "content": "## Maizey Ticket Responder\nPuts the response into the format required for posting back to the TDX ticket. Uses The Maizey API.\n\n\n\n\n\n\n\n\n\n\n\n* To get the URL for your Maizey reference  https://umgpt.umich.edu/api/schema-public/swagger-ui/",
+        "height": 832,
+        "width": 224,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1136,
+        1328
+      ],
+      "id": "552c19a1-11dd-4a9f-9a4c-88eabff40eb9",
+      "name": "Sticky Note24"
+    },
+    {
+      "parameters": {
+        "content": "## Refresh Ticket Details\nRetrieves the latest version of the ticket from TDX before posting a response using the TDX API.\n\n\n\n\n\n\n\n\n\n\n\n* For the URL reference the TDX API Documentation at https://dir.api.it.umich.edu/docs/tdxticket/1/overview\nor https://dir-test.api.it.umich.edu/docs/tdxticket/1/overview (if testing)\n* Add {{$('Get Ticket Details').item.json.ID}} as the path as the end of the endpoint",
+        "height": 832,
+        "width": 224,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        1328
+      ],
+      "id": "edb8287b-5e02-4648-8f86-6d6915be0b7b",
+      "name": "Sticky Note25"
+    },
+    {
+      "parameters": {
+        "content": "## Post Comment On TDX\nPosts the generated response as a comment on the TDX ticket using the TDX API.\n\n\n\n\n\n\n\n\n\n\n\n* For the URL reference the TDX API Documentation at https://dir.api.it.umich.edu/docs/tdxticket/1/overview\nor https://dir-test.api.it.umich.edu/docs/tdxticket/1/overview (if testing)\n* Add {{$json.ID}}/feed as the path at the end of the endpoint",
+        "height": 832,
+        "width": 224,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1584,
+        1328
+      ],
+      "id": "ed29a404-408a-4aa6-b501-0c29f4f25f4d",
+      "name": "Sticky Note26"
+    },
+    {
+      "parameters": {
+        "content": "## Store Processed Ticket ID\nAfter the ticket is processed, the ID is stored to the data table to prevent reprocessing.",
+        "height": 512,
+        "width": 224,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1808,
+        1328
+      ],
+      "id": "cb45d26a-fb96-461a-ab6d-9a60182204ee",
+      "name": "Sticky Note27"
+    },
+    {
+      "parameters": {
+        "content": "## Update TDX Tickets with Comments\n",
+        "height": 1008,
+        "width": 2800,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -448,
+        1184
+      ],
+      "id": "3a081081-8f81-488e-a2a3-e91e0a16a203",
+      "name": "Sticky Note28"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://umgpt.umich.edu/maizey/api/projects/0cf55591-75ac-493c-a17b-dee1943d5ff0/conversation/203992/messages/",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "=test"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        784,
+        1600
+      ],
+      "id": "f88c7df4-0aac-4741-a8f3-2950fea41e10",
+      "name": "Maizey Help",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "JiDRdHZrG3ZNVnVz",
+          "name": "Maizey Help"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Post Comment on Ticket": {
+      "main": [
+        [
+          {
+            "node": "Store Processed Ticket ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Ticket Report": {
+      "main": [
+        [
+          {
+            "node": "Split Tickets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Tickets": {
+      "main": [
+        [
+          {
+            "node": "Get Ticket Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Ticket Details": {
+      "main": [
+        [
+          {
+            "node": "Compare Datasets",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Store Processed Ticket Info": {
+      "main": [
+        [
+          {
+            "node": "Maizey Ticket Responder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Maizey Ticket Responder": {
+      "main": [
+        [
+          {
+            "node": "Refresh Ticket Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Refresh Ticket Details": {
+      "main": [
+        [
+          {
+            "node": "Post Comment on Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Processed Ticket ID": {
+      "main": [
+        []
+      ]
+    },
+    "Get row(s)": {
+      "main": [
+        [
+          {
+            "node": "Compare Datasets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Compare Datasets": {
+      "main": [
+        [],
+        [],
+        [],
+        [
+          {
+            "node": "Maizey Help",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Ticket Report",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get row(s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Maizey Help": {
+      "main": [
+        [
+          {
+            "node": "Store Processed Ticket Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "246b3b79-5491-4497-bd14-8d6e9f1c6830",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "21df30767e7a12816abb6f4649b3c766461f325eb4be29949d16698356aadb7e"
+  },
+  "nodeGroups": [],
+  "id": "GCR66aaSAaVBQ1xq",
+  "tags": []
+}
