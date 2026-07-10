@@ -1,0 +1,702 @@
+{
+  "name": "TDX Weekly Summary",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "https://api.example/reports/12345",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "withData",
+              "value": "true"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        640,
+        1744
+      ],
+      "id": "804eb9e2-7eef-46c5-9f06-7ef0911a87cc",
+      "name": "GenAI Tickets",
+      "credentials": {
+        "oAuth2Api": {
+          "id": "abc123",
+          "name": "Example API Dir"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-5-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-5-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=You are generating an internal weekly TDX summary for the Emerging Technologies team.\n\nAnalyze the ticket data and provide a concise, readable weekly report.\n\nCRITICAL FORMATTING RULES:\n- Put each section on a NEW LINE\n- Insert a blank line between sections\n- Every bullet must start on its own line\n- Never place content on the same line as a heading\n- Never write one continuous paragraph\n\nGoals:\n- Identify recurring themes\n- Highlight major problems or friction points\n- Flag unresolved/unaddressed tickets\n- Surface important trends or operational concerns\n- Do NOT summarize every ticket individually\n- Include the full TeamDynamix ticket URL for every ticket listed under Unaddressed / Needs Attention\n\nTickets:\n{{\n$json.data.map(ticket => `\nTicket ID: ${ticket[\"Ticket ID\"]}\nTicket URL: https://teamdynamix.umich.edu/TDNext/Apps/31/Tickets/TicketDet.aspx?TicketID=${ticket[\"Ticket ID\"]}\nTitle: ${ticket.Title}\nDepartment: ${ticket[\"User Department\"]}\nStatus: ${ticket.Status || ticket[\"Status\"] || \"\"}\nDescription: ${ticket.Description}\nComments: ${ticket.Comments}\n`).join('\\n\\n---\\n\\n')\n}}\n\nOutput EXACTLY as valid HTML suitable for an email.\n\nUse this structure:\n\n<h2>Weekly Summary</h2>\n<p>[3-5 sentence summary]</p>\n\n<h2>Major Themes</h2>\n<ul>\n  <li>Theme 1</li>\n  <li>Theme 2</li>\n  <li>Theme 3</li>\n</ul>\n\n<h2>Ticket Counts</h2>\n<ul>\n  <li><strong>Number of Total Tickets:</strong> [total number]</li>\n  <li><strong>Number of Open Tickets:</strong> [open ticket count]</li>\n  <li><strong>Number of Closed Tickets:</strong> [closed ticket count]</li>\n</ul>\n\n<h2>Key Problems / Friction</h2>\n<ul>\n  <li>Problem 1</li>\n  <li>Problem 2</li>\n  <li>Problem 3</li>\n</ul>\n\n<h2>Unaddressed / Needs Attention</h2>\n<ul>\n  <li><strong>Ticket title (Ticket ID):</strong> <a href=\"ticket URL\">ticket URL</a> — issue or reason it needs attention</li>\n</ul>\n\n<h2>Recommended Attention Areas</h2>\n<ul>\n  <li>Recommendation 1</li>\n  <li>Recommendation 2</li>\n</ul>\n\nIf no tickets need attention, write:\n<h2>Unaddressed / Needs Attention</h2>\n<ul>\n  <li>None identified</li>\n</ul>\n\nDo not use markdown. Return only HTML. Do not wrap the response in code blocks."
+            }
+          ]
+        },
+        "simplify": false,
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        1904,
+        1760
+      ],
+      "id": "e8c7724b-25ba-485d-a7b9-0471dda891e6",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "abc123",
+          "name": "OpenAI Crednetials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "advanced": true,
+        "mergeByFields": {
+          "values": [
+            {
+              "field1": "ID",
+              "field2": "ItemID"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1440,
+        1760
+      ],
+      "id": "10d9d2e9-b916-4b72-9b3c-d071e2da6e27",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.example/tickets/{{$json.TicketID}}/feed",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1216,
+        2048
+      ],
+      "id": "13c70bc7-9bd2-4f87-8c5b-7ce9bfbd8cbc",
+      "name": "Comments",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "oAuth2Api": {
+          "id": "abc123",
+          "name": "Example API Dir"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "=https://api.example/tickets/{{$json.TicketID}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1216,
+        1648
+      ],
+      "id": "325b9d50-8212-49e4-98e6-1c0bda1fada9",
+      "name": "Ticket Data",
+      "credentials": {
+        "oAuth2Api": {
+          "id": "abc123",
+          "name": "Example API Dir"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "DataRows",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        816,
+        1744
+      ],
+      "id": "fddfd639-33db-426d-a64e-814fe8b29a49",
+      "name": "Split Tickets"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "529e8991-794f-4666-be46-f2d4efcfc753",
+              "name": "Ticket ID",
+              "value": "={{ $json.ID}}",
+              "type": "string"
+            },
+            {
+              "id": "d837c7e5-7de6-4d89-b3fb-de913318980b",
+              "name": "Title",
+              "value": "={{ $json.Title }}",
+              "type": "string"
+            },
+            {
+              "id": "8bf3eccf-6c49-4ecf-94fd-3d8f132f89c6",
+              "name": "Description ",
+              "value": "={{ $json.Description }}",
+              "type": "string"
+            },
+            {
+              "id": "17b79e95-db58-466f-93a6-a78192d3373b",
+              "name": "User Department",
+              "value": "={{$json.AccountName}}",
+              "type": "string"
+            },
+            {
+              "id": "8df49b0d-a534-4a76-9562-092e44326b49",
+              "name": "Comments",
+              "value": "={{ $json.Body}}",
+              "type": "string"
+            },
+            {
+              "id": "9f4cb0a4-8b30-447c-af3e-4e8cad553861",
+              "name": "Ticket URL",
+              "value": "=\"https://api.example/Tickets/TicketDet.aspx?TicketID={{$json.ID}}\"",
+              "type": "string"
+            },
+            {
+              "id": "c05c68de-f1dc-4572-9fbd-c303cbf93f4c",
+              "name": "Ticket Status",
+              "value": "={{ $json.StatusName }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1568,
+        1760
+      ],
+      "id": "3827769c-9f2e-46a8-a5fb-8f0545045fa2",
+      "name": "Store Ticket Info"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        1744,
+        1760
+      ],
+      "id": "247a6c74-762a-4465-a050-fe678b194e76",
+      "name": "Aggregate Ticket Data"
+    },
+    {
+      "parameters": {
+        "sendTo": "= exampleemail@umich.edu",
+        "subject": "Weekly TDX Report",
+        "message": "=<h2>Weekly Summary of TDX Tickets</h2>\n\n<h3>Overview</h3>\n\n<div>\n{{$json.output[1].content[0].text.replaceAll('\\n', '<br>') }}\n</div>\n\n<hr>\n\n<p style=\"font-size: 12px; color: #666;\">\nGenerated automatically from TDX ticket data.\n</p>",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        2176,
+        1760
+      ],
+      "id": "d841eed3-648d-4a67-91fd-73fb4353e0a8",
+      "name": "Email Ticket Summary",
+      "webhookId": "334646ad-b4a7-4a11-b819-4e5787e735a3",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "abc123",
+          "name": "Example-gmail-credentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "17bad1e7-cb60-418b-9fe6-5a54956980c9",
+              "leftValue": "={{ $json.LastModifiedDate }}",
+              "rightValue": "={{ $now.minus({ days: 5 }) }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "after"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        1008,
+        1744
+      ],
+      "id": "bb0b096d-50c2-455a-8c85-ba0a04bacab8",
+      "name": "Filter For The Last Week"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                5
+              ],
+              "triggerAtHour": 15,
+              "triggerAtMinute": 15
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        384,
+        1744
+      ],
+      "id": "fc312cf9-3190-4ace-ac3d-a70a9af27928",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "content": "## This Template Demonstrates\nA workflow designed to read TDX Tickets and generate a summary of them to be emailed.\n- Scheduled weekly trigger\n- Gathers all tickets in the specific TDX ticket report\n- Filters the report for tickets from the last week\n- Gets the information from each ticket\n- Simultaneously gets the comments from each ticket\n- Merges the ticket and comment data\n- Sends the ticket data to an AI model to generate a summary\n- Sends the generated summary in an email\n\n",
+        "height": 384,
+        "width": 608,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        416,
+        928
+      ],
+      "id": "38599e3d-759d-4234-96a6-6954aebb4312",
+      "name": "Sticky Note10"
+    },
+    {
+      "parameters": {
+        "content": "## Required Credentials and Scope\n- Umich API Directory\n      - TeamDynamix API credentials used to retrieve ticket information and post responses.\n- OpenAI Credentials\n      - Needed to use AI model to generate summary. Reference KBA on setting up OpenAI credential through Toolkit: https://teamdynamix.umich.edu/TDClient/30/Portal/KB/Article/15331/Configuring-U-M-GPT-Toolkit-API-Key-and-Base-URL\n- Gmail Credentials\n      - Used to send the email with the summary\n",
+        "height": 384,
+        "width": 608
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1024,
+        928
+      ],
+      "id": "6b9e5f34-4728-44a1-b427-8114dbe62bfd",
+      "name": "Sticky Note11"
+    },
+    {
+      "parameters": {
+        "content": "## Ideas and Tips\n- Update the ticket source:\nUpdate the report ID and ticket filters according to your department\n- Reduce API calls: If detailed comments are not required, remove or limit comment retrieval to improve workflow performance.\nReview AI output periodically\n- Validate summaries regularly to ensure important trends and issues are being accurately captured\n",
+        "height": 384,
+        "width": 608,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1632,
+        928
+      ],
+      "id": "315dabfc-5aaa-4842-acdb-40391b4a0120",
+      "name": "Sticky Note12"
+    },
+    {
+      "parameters": {
+        "content": "\n## Get Ticket Report\nGets the TDX report with all of tickets.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nFor the URL, reference the TDX API Documentation at https://dir.api.it.umich.edu/docs/tdxticket/1/overview\nor https://dir-test.api.it.umich.edu/docs/tdxticket/1/overview (if testing)",
+        "height": 1280,
+        "width": 198,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        592,
+        1376
+      ],
+      "id": "06003089-079b-4553-8c6a-d55e2736ba53",
+      "name": "Sticky Note14"
+    },
+    {
+      "parameters": {
+        "content": "## Ticket Data\nThis node retrieves ticket information from TDX, including the ticket ID, title, description, status, requester details, and other metadata needed for the workflow.\n\n\n\n\n\n\n\n\n* For the URL reference the TDX API Documentation at https://dir.api.it.umich.edu/docs/tdxticket/1/overview\nor https://dir-test.api.it.umich.edu/docs/tdxticket/1/overview (if testing)\n* Add {{$json.TicketID}} as the path at the end of the endpoint",
+        "height": 624,
+        "width": 256,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1152,
+        1376
+      ],
+      "id": "b653daff-891a-4478-a921-45cd934e0c14",
+      "name": "Sticky Note15"
+    },
+    {
+      "parameters": {
+        "content": "\n\n\n\n\n\n\n\n\n## Ticket Comments\n\nFor the URL reference the TDX API Documentation at https://dir.api.it.umich.edu/docs/tdxticket/1/overview\nor https://dir-test.api.it.umich.edu/docs/tdxticket/1/overview (if testing)\n* Add {{$json.TicketID}}/feed as the path at the end of the endpoint",
+        "height": 688,
+        "width": 256,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1152,
+        1968
+      ],
+      "id": "8caaa46e-2ec4-4aa9-8e15-3a244b3d8411",
+      "name": "Sticky Note16"
+    },
+    {
+      "parameters": {
+        "content": "## Merge\nCombines the ticket and comment data.",
+        "height": 1280,
+        "width": 150,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1408,
+        1376
+      ],
+      "id": "27c34880-ebd9-47a6-baed-9c6aa48be886",
+      "name": "Sticky Note17"
+    },
+    {
+      "parameters": {
+        "content": "## Store Ticket Info\nStores the ticket data needed for the summary.",
+        "height": 1280,
+        "width": 150,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1536,
+        1376
+      ],
+      "id": "bbd9f00c-0d91-4332-84d7-4c526aa29f64",
+      "name": "Sticky Note18"
+    },
+    {
+      "parameters": {
+        "content": "## Aggregate Ticket Data\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nThis node aggregates ticket data into a single item so all tickets can be summarized together in one AI request. This reduces repeated API calls, improves workflow efficiency, and enables a cohesive weekly summary of trends and unresolved issues.\n",
+        "height": 1280,
+        "width": 208,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1680,
+        1376
+      ],
+      "id": "816ba78c-7379-4c53-bed6-eec74c0ac832",
+      "name": "Sticky Note20"
+    },
+    {
+      "parameters": {
+        "content": "## Message a Model\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nThis node uses an AI model to analyze aggregated ticket data and generate a weekly summary. It identifies recurring themes, major issues, unresolved tickets, and key trends from the ticket queue in a single API request.\n",
+        "height": 1280,
+        "width": 256,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1888,
+        1376
+      ],
+      "id": "a1f224a3-3167-44a8-b6c9-ef91442ee33b",
+      "name": "Sticky Note21"
+    },
+    {
+      "parameters": {
+        "content": "## Email Ticket Summary\nThis node sends an email with the weekly summary of the TDX tickets.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nTo get Gmail Credentials, you must set it up in Google Console. See documentation https://docs.n8n.io/integrations/builtin/credentials/google/#compatible-nodes",
+        "height": 1280,
+        "width": 192,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2144,
+        1376
+      ],
+      "id": "4095803e-9685-487c-921d-8407fcbf5a36",
+      "name": "Sticky Note22"
+    },
+    {
+      "parameters": {
+        "content": "## Weekly Summary of TDX Tickets\n",
+        "height": 1424,
+        "width": 2128,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        272,
+        1312
+      ],
+      "id": "536909a6-0a27-4df8-bfe1-0b6e0983222c",
+      "name": "Sticky Note23"
+    },
+    {
+      "parameters": {
+        "content": "## Weekly Trigger\nTriggers the workflow to run weekly.",
+        "height": 1280,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        352,
+        1376
+      ],
+      "id": "4ccba192-c40b-4d90-ba3e-114332f45f3c",
+      "name": "Sticky Note24"
+    },
+    {
+      "parameters": {
+        "content": "## Split Tickets\nSplits the report so the tickets can be processed one at a time by the workflow.",
+        "height": 1280,
+        "width": 176,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        784,
+        1376
+      ],
+      "id": "ddabc8be-6f5b-46a7-9d69-476efa872d4d",
+      "name": "Sticky Note25"
+    },
+    {
+      "parameters": {
+        "content": "\n## Tickets This Week\nFilters the Ticket so it only processes those from the last week.",
+        "height": 1280,
+        "width": 198,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        960,
+        1376
+      ],
+      "id": "c6d1af46-e926-4471-be40-73596ba73d75",
+      "name": "Sticky Note26"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "GenAI Tickets": {
+      "main": [
+        [
+          {
+            "node": "Split Tickets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Store Ticket Info",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comments": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Ticket Data": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Email Ticket Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Tickets": {
+      "main": [
+        [
+          {
+            "node": "Filter For The Last Week",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Ticket Info": {
+      "main": [
+        [
+          {
+            "node": "Aggregate Ticket Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate Ticket Data": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter For The Last Week": {
+      "main": [
+        [
+          {
+            "node": "Ticket Data",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Comments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "GenAI Tickets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "0eb12f3f-1816-48e0-a1af-5edbaa4cf154",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "21df30767e7a12816abb6f4649b3c766461f325eb4be29949d16698356aadb7e"
+  },
+  "nodeGroups": [],
+  "id": "gGcoWmrNVwgwDpqi",
+  "tags": []
+}
