@@ -152,7 +152,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://umgpt.umich.edu/maizey/api/projects/a2b2789b-f4dd-4de7-8446-3728ae5bbc79/conversation/203997/messages/",
+        "url": "https://custom.chatbot.url",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpBearerAuth",
         "sendHeaders": true,
@@ -193,7 +193,7 @@
     {
       "parameters": {
         "method": "PATCH",
-        "url": "=https://gw.api.it.umich.edu/um/it/31/tickets/{{$('Get Ticket Details').item.json.ID}}",
+        "url": "=https://api.example.com/tickets/{{$('Get Ticket Details').item.json.ID}}",
         "authentication": "genericCredentialType",
         "genericAuthType": "oAuth2Api",
         "sendHeaders": true,
@@ -225,8 +225,8 @@
       "name": "Refresh Ticket Details",
       "credentials": {
         "oAuth2Api": {
-          "id": "df5GDo8R1cSaPSBc",
-          "name": "Umich API Dir"
+          "id": "abc123",
+          "name": "Example API Dir"
         }
       }
     },
@@ -591,7 +591,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://umgpt.umich.edu/maizey/api/projects/0cf55591-75ac-493c-a17b-dee1943d5ff0/conversation/203992/messages/",
+        "url": "https://custom.chatbot.url",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpBearerAuth",
         "sendHeaders": true,
