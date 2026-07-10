@@ -1,0 +1,995 @@
+{
+  "name": "KBA tags",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "=https://api.example/tickets/{{$json.TicketID}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        80,
+        -256
+      ],
+      "id": "22e1ea32-1c0a-4086-9d27-f5b12f5779c2",
+      "name": "Ticket Data",
+      "credentials": {
+        "oAuth2Api": {
+          "id": "abc123",
+          "name": "Example API Dir"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "DataRows",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        -400,
+        -256
+      ],
+      "id": "42436ea6-8688-4c77-b5a5-cf40550968a3",
+      "name": "Split Tickets"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                5
+              ],
+              "triggerAtHour": 15,
+              "triggerAtMinute": 15
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -880,
+        -256
+      ],
+      "id": "25ff46d1-b6cf-43d0-b6ab-dadb07f299e3",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "content",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        848,
+        -256
+      ],
+      "id": "2501e2de-80c6-4223-9996-4b290735ab54",
+      "name": "Split Out1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nconst ticket = $('Ticket Data').item.json;\nconst query = $('Store Query').item.json.kbsearch;\nconst items = $input.all();\n\nconst articles = items.map(item => ({\n  articleId: item.json.ID,\n  title: item.json.Subject,\n  category: item.json.CategoryName,\n  body: item.json.Body\n}));\n\nreturn [{\n  json: {\n    ticketId: ticket.ID || ticket.TicketID,\n    ticketTitle: ticket.Title || ticket.Subject,\n    ticketDescription: ticket.Description || ticket.Body,\n    queryUsed: query,\n    articles\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2032,
+        -240
+      ],
+      "id": "f1dda251-968c-43ee-92eb-8aa1da7e2c72",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-5-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-5-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Ticket title:\n{{$json[\"Title\"] || $json[\"Subject\"]}}\n\nTicket description:\n{{$json[\"Description\"] || $json[\"Body\"]}}"
+            },
+            {
+              "role": "system",
+              "content": "Create one TeamDynamix KB search query for this ticket.\n\nRules:\n- Output only the query.\n- Use 4 to 8 words.\n- Use exact product names, field names, error messages, and issue symptoms.\n- Prefer words from the ticket title and description.\n- Do not generalize the issue.\n- Do not include names, emails, UMIDs, ticket numbers, or personal identifiers.\n- Do not use broad concepts unless they appear in the ticket.\n- be as specific as possible in regards to what the ticket is requesting.\n- Only returns keys words for the search. No why, what, how, etc."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        288,
+        -256
+      ],
+      "id": "fc99e5fe-55c0-4c01-8aaf-ec25d88ac342",
+      "name": "Generate Queries",
+      "executeOnce": false,
+      "alwaysOutputData": false,
+      "credentials": {
+        "openAiApi": {
+          "id": "abc123",
+          "name": "OpenAI credentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-5-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-5-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Ticket ID: {{ $json.ticketId }}\nTitle: {{ $json.ticketTitle }}\nDescription: {{ $json.ticketDescription }}\n\nSearch query used:\n{{ $json.queryUsed }}\n\nKB articles (JSON array):\n{{ JSON.stringify($json.articles) }}"
+            },
+            {
+              "role": "system",
+              "content": "You are checking whether each KB article contains information relevant to this ticket.\nReturn only a valid JSON array, one object per article, in this format:\n\n[\n  {\n    \"ticketId\": \"...\",\n    \"articleId\": \"...\",\n    \"title\": \"...\",\n    \"relevanceScore\": 50,\n    \"confidence\": \"high\",\n    \"reason\": \"brief reasoning\"\n  }\n]\n\nrelevanceScore:\n0 = unrelated\n25 = loosely related\n50 = somewhat useful\n75 = likely useful\n100 = directly resolves the ticket"
+            }
+          ]
+        },
+        "simplify": false,
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        2240,
+        -240
+      ],
+      "id": "62faaf89-a388-4a6f-b793-676354b7333b",
+      "name": "Rank Relevance of Articles",
+      "retryOnFail": true,
+      "credentials": {
+        "openAiApi": {
+          "id": "abc123",
+          "name": "OpenAI credentials"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0bcce79f-f77e-4e4c-ba3d-de6266ce788b",
+              "leftValue": "={{ $json.relevanceScore }}",
+              "rightValue": 75,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1792,
+        -544
+      ],
+      "id": "544ae62e-c1b3-4aa4-a686-4dbfb72726a0",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "17bad1e7-cb60-418b-9fe6-5a54956980c9",
+              "leftValue": "={{ $json.LastModifiedDate }}",
+              "rightValue": "={{ $now.minus({ days: 5 }) }}",
+              "operator": {
+                "type": "dateTime",
+                "operation": "after"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        -160,
+        -256
+      ],
+      "id": "ce580b9f-66b7-4800-be41-244860d2e74f",
+      "name": "Filter For The Last Week"
+    },
+    {
+      "parameters": {
+        "content": "## Weekly Trigger Node\nThis node schedules the worlflow to run on a weekly basis.",
+        "height": 320,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -944,
+        -400
+      ],
+      "id": "9ecb5719-7dbb-4d72-85ff-36d28251382b",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Get Ticket Report\nThis node pulls the ticket report from TDX.",
+        "height": 320,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -704,
+        -400
+      ],
+      "id": "99b54a20-40a4-4c38-9804-9d129030d784",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Split Tickets\nSplits the report so the tickets can be processed one at a time by the workflow.",
+        "height": 320,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -464,
+        -400
+      ],
+      "id": "5e82b746-07e2-46cd-b1c7-45e7a808e6a0",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## Filter For The Last Week\n** Isolates all tickets that were submitted within the last week.",
+        "height": 320,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        -400
+      ],
+      "id": "0862d662-c97f-4437-9399-c309b161f8e2",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## Ticket Data\nPulls out the information from each ticket.",
+        "height": 320,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        16,
+        -400
+      ],
+      "id": "27500dfb-df55-44e5-a18f-cc15cc9128d6",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "## Generate Queries\nThis node takes in all the ticket data and generates a concise query for the knowledge base using an LLM.",
+        "height": 320,
+        "width": 288,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        256,
+        -400
+      ],
+      "id": "662248a8-f5c9-4953-8f2c-1bcea970835b",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "## Split Response\nSplits out the response from the AI node so that the content of the response can be isolated.",
+        "height": 320,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        544,
+        -400
+      ],
+      "id": "c168d739-ca5e-43c1-bc4e-9cce0844636a",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "## Split Content\nFurther splits the response content so that the query generated can be isolated.",
+        "height": 320,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        784,
+        -400
+      ],
+      "id": "c97b7c70-07c0-40b5-817a-56064e589be6",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "content": "## Store Query\nStores the query into a variable called kbsearch.",
+        "height": 320,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1024,
+        -400
+      ],
+      "id": "71c1fea2-0cf2-4e65-b7f3-5b6026e4f60a",
+      "name": "Sticky Note8"
+    },
+    {
+      "parameters": {
+        "content": "## Loop Over Queries\nLoops over each queries so that the HTTP request isn't getting all at once. Prevents \"Too Many Requests\" error.",
+        "height": 320,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1264,
+        -400
+      ],
+      "id": "7c04a540-047b-41b6-acaf-726027de13ec",
+      "name": "Sticky Note9"
+    },
+    {
+      "parameters": {
+        "content": "## Parse AI Response\nParses the AI's JSON response into structured workflow data.",
+        "height": 320,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1504,
+        -720
+      ],
+      "id": "1430cbcb-c74a-4afb-a371-220e90fd8eb8",
+      "name": "Sticky Note10"
+    },
+    {
+      "parameters": {
+        "content": "## Search Content of KBAs\nUses the query and searches within the KBA content to find  articles relevant to the ticket\n",
+        "height": 320,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1504,
+        -400
+      ],
+      "id": "97ae3bd9-4a9f-4a03-957e-bbf50e949177",
+      "name": "Sticky Note11"
+    },
+    {
+      "parameters": {
+        "content": "## Limit Articles\nLimits the amount of articles per ticket to 10.",
+        "height": 320,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1744,
+        -400
+      ],
+      "id": "9ec0e1de-24b7-44c8-82ab-92bfb2542969",
+      "name": "Sticky Note12"
+    },
+    {
+      "parameters": {
+        "content": "## Create AI Input\nCombines support ticket information, the generated knowledge base search query, and retrieved articles into a single JSON object to prepare data for AI-based relevance ranking.",
+        "height": 320,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1984,
+        -400
+      ],
+      "id": "ad6350b4-22c8-49a7-b89f-745a96ffc699",
+      "name": "Sticky Note13"
+    },
+    {
+      "parameters": {
+        "content": "## Rank Relevance of Articles\nUses AI to rank how relevant each article is to the ticket it corresponds to. It gives it a score out of 100, a confidence level, and a reasoning.",
+        "height": 320,
+        "width": 272,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2224,
+        -400
+      ],
+      "id": "85b595ac-252a-4149-857f-934a0a26008e",
+      "name": "Sticky Note14"
+    },
+    {
+      "parameters": {
+        "content": "## IF node\nDetermines whether or not the relevance score is greater than or equal to 75.",
+        "height": 320,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1744,
+        -720
+      ],
+      "id": "606da7ed-5e8b-43e6-a40f-a8b5e45b8639",
+      "name": "Sticky Note15"
+    },
+    {
+      "parameters": {
+        "content": "## Relevant Articles\nStores the information for the articles that are relevant to a given ticket",
+        "height": 320,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1984,
+        -720
+      ],
+      "id": "905db31a-c419-4d30-abed-c7b6c7b2ae79",
+      "name": "Sticky Note16"
+    },
+    {
+      "parameters": {
+        "content": "## Organize Output\nMakes the output so that each ticket has a list of relevant corresponding articles and the reason why.",
+        "height": 320,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2224,
+        -720
+      ],
+      "id": "aa9cccad-47e0-4509-8856-61066ebd54d9",
+      "name": "Sticky Note18"
+    },
+    {
+      "parameters": {
+        "content": "## KBA Tags\nThis workflow associates Knowledge Base Articles (KBAs) to tickets received.",
+        "height": 1120,
+        "width": 3568,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1024,
+        -944
+      ],
+      "id": "72aef70c-2ad4-41e1-bbfc-e1e408e42458",
+      "name": "Sticky Note19"
+    },
+    {
+      "parameters": {
+        "content": "## This Template Demonstrates\nA workflow designed to read TDX Tickets and search within the knowledge base for an article that relates to the ticket.\n- Scheduled weekly trigger\n- Gathers all tickets in the specific TDX ticket report\n- Filters the report for tickets from the last week\n- Gets the information from each ticket\n- Sends the ticket data to an AI model to generate queries\n- Sends the queries to the knowledge base and pulls many relevant articles\n- Sends the articles to another AI node to rate the relevance of them\n- If the article is relevant, it attaches the ticket id to the corresponding article(s)\n\n",
+        "height": 384,
+        "width": 720,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -224,
+        -1328
+      ],
+      "id": "af300a35-7dc3-4946-896f-b73e9cc9bd51",
+      "name": "Sticky Note20"
+    },
+    {
+      "parameters": {
+        "content": "## Required Credentials and Scope\n- Umich API Directory\n      - TeamDynamix API credentials used to retrieve ticket information and post responses.\n- OpenAI Credentials\n      - Needed to use AI model to generate summary. Reference KBA on setting up OpenAI credential through Toolkit: https://teamdynamix.umich.edu/TDClient/30/Portal/KB/Article/15331/Configuring-U-M-GPT-Toolkit-API-Key-and-Base-URL\n\n",
+        "height": 384,
+        "width": 608
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        496,
+        -1328
+      ],
+      "id": "3aab06ae-36f9-4778-8c81-7f1f40d246eb",
+      "name": "Sticky Note21"
+    },
+    {
+      "parameters": {
+        "content": "## Ideas and Tips\n- Update the ticket source:\n- Update the report ID and ticket filters according to your department\n- Review AI output periodically\n- Validate the results before tagging the article in the ticket response\n",
+        "height": 384,
+        "width": 608,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1104,
+        -1328
+      ],
+      "id": "28cd108d-5259-49ac-b95c-fc8346951e6c",
+      "name": "Sticky Note22"
+    },
+    {
+      "parameters": {
+        "url": "https://example.api/reports/12345",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "withData",
+              "value": "true"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -640,
+        -256
+      ],
+      "id": "ceffc84e-cf17-4723-ad37-75fa426263fd",
+      "name": "Get Ticket Report",
+      "credentials": {
+        "oAuth2Api": {
+          "id": "abc123",
+          "name": "Example API Dir"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "output",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        608,
+        -256
+      ],
+      "id": "28f51828-630f-466b-9771-bdebfebd81fb",
+      "name": "Split Responses"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ae66cb7d-e8c5-4307-ad26-f1a1151c318a",
+              "name": "kbsearch",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1088,
+        -256
+      ],
+      "id": "f00263c9-402c-4369-97ee-00f95a16a761",
+      "name": "Store Query"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1328,
+        -256
+      ],
+      "id": "bd0dd9a8-6060-410e-9ed6-9a10aaa55d2f",
+      "name": "Loop Over Queries"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://example.api/knowledgebase/search",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "SearchText",
+              "value": "={{ $json.kbsearch }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1568,
+        -240
+      ],
+      "id": "4a0dfbd7-a697-4036-b1c1-cddbc50d5f01",
+      "name": "Search Content of The KBAs",
+      "credentials": {
+        "oAuth2Api": {
+          "id": "abc123",
+          "name": "Example API Dir"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "maxItems": 10
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        1808,
+        -240
+      ],
+      "id": "fb8be274-1f8f-46a0-979b-1931dce50ae2",
+      "name": "Limit Articles"
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = [];\n\nfor (const item of $input.all()) {\n  const messageOutput = item.json.output.find(o => o.type === \"message\");\n  if (!messageOutput) continue;\n\n  let text = messageOutput.content[0].text\n    .replace(/^```json\\s*/i, \"\")\n    .replace(/^```\\s*/i, \"\")\n    .replace(/\\s*```$/, \"\")\n    .trim();\n\n  try {\n    const parsed = JSON.parse(text);\n\n    for (const a of parsed) {\n      results.push({\n        json: {\n          ...a,\n          relevanceScore: Number(a.relevanceScore)\n        }\n      });\n    }\n  } catch (err) {\n    return [{\n      json: {\n        error: err.message,\n        badText: text\n      }\n    }];\n  }\n}\n\nreturn results;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        -544
+      ],
+      "id": "fac711c3-1a3e-4da4-be40-cd476bcbfa85",
+      "name": "Parse AI Response"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "063cbc6a-261e-4f6c-87f3-09b140486b42",
+              "name": "TicketID",
+              "value": "={{ $json.ticketId }}",
+              "type": "string"
+            },
+            {
+              "id": "6ea393fe-e2cb-4abf-b4cf-7d64c50fd149",
+              "name": "articleId",
+              "value": "={{ $json.articleId }}",
+              "type": "string"
+            },
+            {
+              "id": "6a74d312-f83f-48fc-860a-bae6b6fd2103",
+              "name": "title",
+              "value": "={{ $json.title }}",
+              "type": "string"
+            },
+            {
+              "id": "0ab95706-e00f-4714-ad38-fbcbbbe2fd93",
+              "name": "Reason",
+              "value": "={{ $json.reason }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2048,
+        -544
+      ],
+      "id": "ff776c59-58fb-4800-9092-061e813adbba",
+      "name": "Relevant Articles"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nconst grouped = {};\n\nfor (const item of $input.all()) {\n  const { TicketID, articleId, title, Reason } = item.json;\n\n  if (!grouped[TicketID]) {\n    grouped[TicketID] = {\n      TicketID,\n      articles: []\n    };\n  }\n\n  grouped[TicketID].articles.push({\n    articleId,\n    title,\n    Reason\n  });\n}\n\nreturn Object.values(grouped).map(ticket => ({\n  json: ticket\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2272,
+        -544
+      ],
+      "id": "4bbfd96b-b260-4805-87c8-0b781650125e",
+      "name": "Organize Output"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Split Tickets": {
+      "main": [
+        [
+          {
+            "node": "Filter For The Last Week",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Ticket Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ticket Data": {
+      "main": [
+        [
+          {
+            "node": "Generate Queries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out1": {
+      "main": [
+        [
+          {
+            "node": "Store Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Rank Relevance of Articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Queries": {
+      "main": [
+        [
+          {
+            "node": "Split Responses",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rank Relevance of Articles": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Queries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Relevant Articles",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Filter For The Last Week": {
+      "main": [
+        [
+          {
+            "node": "Ticket Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Ticket Report": {
+      "main": [
+        [
+          {
+            "node": "Split Tickets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Responses": {
+      "main": [
+        [
+          {
+            "node": "Split Out1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Query": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Queries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Queries": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Search Content of The KBAs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Content of The KBAs": {
+      "main": [
+        [
+          {
+            "node": "Limit Articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit Articles": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Response": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Relevant Articles": {
+      "main": [
+        [
+          {
+            "node": "Organize Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "5a63e319-b74b-4161-b279-544bbe539ea7",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "21df30767e7a12816abb6f4649b3c766461f325eb4be29949d16698356aadb7e"
+  },
+  "nodeGroups": [],
+  "id": "nBdIXWsb1P0UVB9Z",
+  "tags": []
+}
